@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\Category;
+use GuzzleHttp\Psr7\Response;
+use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Validation\Rule;
 
 class PostController extends Controller
 {
@@ -14,8 +17,6 @@ class PostController extends Controller
     {
         return view('posts.index', [
             'posts' => Post::latest()->filter(request(['search', 'category', 'author']))->paginate(6)->withQueryString(),
-
-
         ]);
     }
 
@@ -25,5 +26,27 @@ class PostController extends Controller
             'post' => $post,
             'categories' => Category::all()
         ]);
+    }
+
+    public function create()
+    {
+
+
+        return view('posts.create');
+    }
+    public function store()
+    {
+        $att = request()->validate([
+            'title' => 'required',
+            'thumbnail' => 'required|image',
+            'slug' => ['required', Rule::unique('posts', 'slug')],
+            'excerpt' => 'required',
+            'body' => 'required',
+            'category_id' => ['required', Rule::exists('categories', 'id')],
+        ]);
+        $att['user_id'] = auth()->id();
+        $att['thumbnail'] =  request()->file('thumbnail')->store('thumbnails');
+        Post::create($att);
+        return redirect('/');
     }
 }
